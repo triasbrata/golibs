@@ -1,3 +1,3 @@
-package types
+package utils
 
 type H = map[string]interface{}

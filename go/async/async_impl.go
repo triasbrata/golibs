@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/triasbrata/golibs/go/types"
+	"github.com/triasbrata/golibs/go/utils"
 )
 
 // implemenet from async
 type ta struct {
-	funcHolder types.H
+	funcHolder utils.H
 }
 
 // Add implements Async.
@@ -29,7 +29,7 @@ func (t *ta) DoWithMaxConcurrency(ctx context.Context, maxConcurrency int) (map[
 }
 
 func (t *ta) do(ctx context.Context, maxConcurrency int) (res map[string]interface{}, err error) {
-	res = types.H{}
+	res = utils.H{}
 	wg := sync.WaitGroup{}
 	lenFunc := len(t.funcHolder)
 	wg.Add(lenFunc)
@@ -73,7 +73,7 @@ func (t *ta) do(ctx context.Context, maxConcurrency int) (res map[string]interfa
 
 func New() Async {
 	return &ta{
-		funcHolder: make(types.H),
+		funcHolder: make(utils.H),
 	}
 }
 
