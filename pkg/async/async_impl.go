@@ -1,11 +1,11 @@
-package golib
+package async
 
 import (
 	"context"
 	"fmt"
 	"sync"
 
-	"github.com/triasbrata/golibs/go/utils"
+	"github.com/triasbrata/golibs/pkg/utils"
 )
 
 // implemenet from async

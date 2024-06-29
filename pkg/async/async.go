@@ -1,9 +1,9 @@
-package golib
+package async
 
 import (
 	"context"
 
-	"github.com/triasbrata/golibs/go/utils"
+	"github.com/triasbrata/golibs/pkg/utils"
 )
 
 type FuncAsync = func(ctx context.Context) (interface{}, error)

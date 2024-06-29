@@ -11,7 +11,7 @@ import (
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/jmoiron/sqlx"
 	"github.com/stretchr/testify/assert"
-	"github.com/triasbrata/golibs/go/utils"
+	"github.com/triasbrata/golibs/pkg/utils"
 )
 
 func Test_dbx_Close(t *testing.T) {
