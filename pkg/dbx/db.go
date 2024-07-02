@@ -9,7 +9,7 @@ import (
 
 type FuncTx func(Tx) error
 
-//go:generate mockery  --name=Tx
+//go:generate mockery  --name=Tx --outpkg=dbxm
 type Tx interface {
 	BindNamed(query string, arg interface{}) (string, []interface{}, error)
 	Commit() error
@@ -19,7 +19,7 @@ type Tx interface {
 	SelectContext(ctx context.Context, dest interface{}, query string, args ...interface{}) error
 }
 
-//go:generate mockery  --name=DB
+//go:generate mockery  --name=DB --outpkg=dbxm
 type DB interface {
 	BeginTxx(ctx context.Context, opts *sql.TxOptions) (Tx, error)
 	BindNamed(query string, arg interface{}) (string, []interface{}, error)
