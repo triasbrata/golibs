@@ -6,7 +6,7 @@ import (
 	context "context"
 
 	mock "github.com/stretchr/testify/mock"
-	dbx "github.com/triasbrata/golibs/go/dbx"
+	dbx "github.com/triasbrata/golibs/pkg/dbx"
 
 	sql "database/sql"
 

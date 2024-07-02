@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"errors"
 
-	"github.com/triasbrata/golibs/go/dbx"
+	"github.com/triasbrata/golibs/pkg/dbx"
 )
 
 func Tx(ctx context.Context, db dbx.DB, h func(dbx.Tx) error) (err error) {
