@@ -34,6 +34,7 @@ func (t *ta) do(ctx context.Context, maxConcurrency int) (res map[string]interfa
 	lenFunc := len(t.funcHolder)
 	wg.Add(lenFunc)
 	var sem chan struct{}
+	// if have max concurancy then we will create an concuracy controller with semantic mecanism
 	if maxConcurrency > 0 {
 		sem = make(chan struct{}, maxConcurrency)
 	}
