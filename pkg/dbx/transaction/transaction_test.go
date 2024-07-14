@@ -10,7 +10,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/triasbrata/golibs/pkg/dbx"
-	mock_db "github.com/triasbrata/golibs/pkg/dbx/mocks"
+	mock_db "github.com/triasbrata/golibs/pkg/dbx/dbxm"
 )
 
 func TestTx(t *testing.T) {
