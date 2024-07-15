@@ -12,7 +12,7 @@ func ParseIpAndPort(serverAddress string) (ip net.IP, port int, err error) {
 	port = 9040
 	addr := strings.Split(serverAddress, ":")
 	if len(addr) == 1 {
-		ip = net.ParseIP(serverAddress)
+		ip = net.ParseIP(strings.Join(addr[0:len(addr)-1], ":"))
 	} else if len(addr) >= 2 {
 		ip = net.ParseIP(serverAddress)
 		tempPort, err := strconv.ParseInt(addr[len(addr)-1], 10, 32)
