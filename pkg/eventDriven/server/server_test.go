@@ -1,4 +1,4 @@
-package eventdriven
+package server
 
 import (
 	"net"

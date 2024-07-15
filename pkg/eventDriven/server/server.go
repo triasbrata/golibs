@@ -1,14 +1,14 @@
-package eventdriven
+package server
 
 import (
 	"fmt"
 	"net"
-	"strings"
 	"sync"
 
 	"github.com/triasbrata/golibs/pkg/eventDriven/internals/client"
+	clientmanager "github.com/triasbrata/golibs/pkg/eventDriven/internals/clientmanagers"
+	"github.com/triasbrata/golibs/pkg/eventDriven/internals/crypto"
 	"github.com/triasbrata/golibs/pkg/eventDriven/internals/events"
-	"github.com/triasbrata/golibs/pkg/eventDriven/internals/gen"
 	"github.com/triasbrata/golibs/pkg/eventDriven/internals/model"
 	"github.com/triasbrata/golibs/pkg/eventDriven/internals/parser"
 	"github.com/triasbrata/golibs/pkg/eventDriven/internals/types"
@@ -23,12 +23,27 @@ type server struct {
 	// mapping by  event namespace handler
 	events map[string]map[string]interface{}
 	//holder client
-	clients   types.ServerClientManager
+	clients   types.ClientManager
 	namespace string
 	Id        string
 	idGen     types.ShortID
 	wg        *sync.WaitGroup
 	*ServOpt
+}
+
+// GetCon implements types.ReaderUDP.
+func (s *server) GetCon() *net.UDPConn {
+	return s.con
+}
+
+// GetMaxLengthMessage implements types.ReaderUDP.
+func (s *server) GetMaxLengthMessage() int64 {
+	return s.MaxLenMessage
+}
+
+// IsConClose implements types.ReaderUDP.
+func (s *server) IsConClose() bool {
+	return s.close
 }
 
 // Close implements Server.
@@ -51,7 +66,7 @@ func (s *server) Event(event string, h interface{}) error {
 	}
 	ne[s.namespace] = h
 	s.events[event] = ne
-	fmt.Printf("event %s registered", event)
+	fmt.Printf("event %s registered\n", event)
 	return nil
 }
 
@@ -68,12 +83,12 @@ func (s *server) findEvent(event string, namespace string) interface{} {
 
 // Send implements Server.
 func (s *server) Send(data types.Dto) error {
-
-	if data.ReciverID() == s.Id {
+	//send to self
+	if data.ReciverID() == data.SenderID() {
 		eventHandler := s.findEvent(data.Event(), data.Namespace())
-		fmt.Printf("eventHandler: %v\n", eventHandler)
 		if eventHandler != nil {
-			return client.HandlerInvoker(eventHandler, client.NewInternalClient(s.Id), data.Data())
+
+			return client.HandlerInvoker(eventHandler, s.clients.Get(s.Id), data.Data())
 		}
 		return nil
 	}
@@ -122,55 +137,34 @@ func (s *server) Listen(address ...string) (err error) {
 	go s.receiveMessage()
 	fmt.Printf("server listening at %v:%v\n", ip, port)
 
-	if addr, ok := s.con.LocalAddr().(*net.UDPAddr); ok {
-		s.Send(model.NewDto(*addr, s.Id, s.Id, s.namespace, events.CONNECTED, "hello"))
-	}
+	//self register as client and invoke connected event
+	locAddr := s.con.LocalAddr()
+	s.clients.Register(func() (cid string, cl types.Client, err error) {
+		return s.Id, client.NewInternalClient(s.Id, locAddr), nil
+	})
+	s.Send(model.NewDto(locAddr, s.Id, s.Id, s.namespace, events.CONNECTED, "hello"))
+
+	//wait all process recive message
 	s.wg.Wait()
 	return nil
 }
 func (s *server) receiveMessage() {
-	for {
-		if s.close {
-			return
-		}
-		remoteAddr, err, msg := s.readMessage()
-		if err != nil {
-			if strings.Contains(err.Error(), "closed network connection") && s.close {
-				return
-			}
-			fmt.Printf("Some error  %v", err)
-			return
-		}
-		payload := model.NewDto(net.UDPAddr{}, "", "", "", "", nil)
-		err = msgpack.Unmarshal(msg, payload)
-		if err != nil {
-			fmt.Printf("Some error when parse %v", err)
-
-		}
+	parser.ListenNewMessage(s, func(payload types.Dto, remoteAddr net.Addr) {
 		if ne, safe := s.events[payload.Event()]; safe {
 			if handler, safe := ne[payload.Namespace()]; safe {
 				switch payload.Event() {
 				case events.CONNECTING:
+					s.clients.Register(func() (cid string, cl types.Client, err error) {
+						clientID := s.idGen.Generate()
+						return clientID, client.NewInternalClient(clientID, remoteAddr), nil
+					})
 					client.HandlerInvoker(handler, nil, remoteAddr)
 				default:
-					client.HandlerInvoker(handler, client.NewInternalClient(payload.SenderID()), payload.Event())
+					client.HandlerInvoker(handler, s.clients.Get(payload.SenderID()), payload.Event())
 				}
-
 			}
 		}
-	}
-}
-
-func (s *server) readMessage() (*net.UDPAddr, error, []byte) {
-	msg := make([]byte, s.ServOpt.MaxLenMessage)
-	_, remoteAddr, err := s.con.ReadFromUDP(msg)
-	trimMsg := make([]byte, 0)
-	for _, b := range msg {
-		if b != 0 {
-			trimMsg = append(trimMsg, b)
-		}
-	}
-	return remoteAddr, err, trimMsg
+	})
 }
 
 func New(option types.ServerOptions) (types.Server, error) {
@@ -180,12 +174,13 @@ func New(option types.ServerOptions) (types.Server, error) {
 	}
 	servOpt := so.(*ServOpt)
 	servOpt.fill()
-	sid := gen.NewSID()
+	sid := crypto.NewSID()
 
 	serverInstance := &server{
 		quit:      make(chan struct{}, 1),
 		ServOpt:   servOpt,
 		close:     true,
+		clients:   clientmanager.NewMemoryManager(),
 		events:    make(map[string]map[string]interface{}),
 		Id:        sid.Generate(),
 		idGen:     sid,
@@ -197,14 +192,5 @@ func New(option types.ServerOptions) (types.Server, error) {
 	return serverInstance, nil
 }
 func (s *server) hookInit() {
-	var hConnecting types.ClientHandlerDataOnly = func(d any) error {
-		if remoteAddr, safe := d.(*net.UDPAddr); safe {
-			err := s.clients.Register(s.idGen.Generate(), remoteAddr)
-			if err != nil {
-				return fmt.Errorf("failed register client with error %w", err)
-			}
-		}
-		return nil
-	}
-	s.Event(events.CONNECTING, hConnecting)
+	s.Event(events.CONNECTING, handlerConnecting(s))
 }

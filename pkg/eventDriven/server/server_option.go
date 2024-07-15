@@ -1,4 +1,4 @@
-package eventdriven
+package server
 
 import (
 	"github.com/triasbrata/golibs/pkg/eventDriven/internals/cons"
