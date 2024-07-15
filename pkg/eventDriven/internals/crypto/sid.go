@@ -1,4 +1,4 @@
-package gen
+package crypto
 
 import (
 	"github.com/lithammer/shortuuid/v4"

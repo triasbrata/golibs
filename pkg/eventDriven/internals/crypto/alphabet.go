@@ -1,4 +1,4 @@
-package gen
+package crypto
 
 import (
 	"math/rand"
