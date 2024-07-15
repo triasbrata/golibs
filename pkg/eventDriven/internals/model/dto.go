@@ -6,58 +6,58 @@ import (
 	"github.com/triasbrata/golibs/pkg/eventDriven/internals/types"
 )
 
-type stdDto struct {
-	address    net.UDPAddr `msgpack:"target"`
-	sender_id  string      `msgpack:"sender_id"`
-	reciver_id string      `msgpack:"reciver_id"`
-	event      string      `msgpack:"event"`
-	data       interface{} `msgpack:"data"`
-	namespace  string
+type StdDto struct {
+	FAddress   net.Addr    `msgpack:"target"`
+	FSenderId  string      `msgpack:"sender_id"`
+	FReciverId string      `msgpack:"reciver_id"`
+	FEvent     string      `msgpack:"event"`
+	FData      interface{} `msgpack:"data",omitempty`
+	FNamespace string      `msgpack:"namespace"`
 }
 
 // Data implements types.Dto.
-func (sd *stdDto) Data() interface{} {
-	return sd.data
+func (sd *StdDto) Data() interface{} {
+	return sd.FData
 }
 
 // Event implements types.Dto.
-func (sd *stdDto) Event() string {
-	return sd.event
+func (sd *StdDto) Event() string {
+	return sd.FEvent
 }
 
 // Namespace implements types.Dto.
-func (sd *stdDto) Namespace() string {
-	return sd.namespace
+func (sd *StdDto) Namespace() string {
+	return sd.FNamespace
 }
 
 // ReciverID implements types.Dto.
-func (sd *stdDto) ReciverID() string {
-	return sd.reciver_id
+func (sd *StdDto) ReciverID() string {
+	return sd.FReciverId
 }
 
 // SenderID implements types.Dto.
-func (sd *stdDto) SenderID() string {
-	return sd.sender_id
+func (sd *StdDto) SenderID() string {
+	return sd.FSenderId
 }
 
-func (sd *stdDto) Address() net.Addr {
-	return &sd.address
+func (sd *StdDto) Address() net.Addr {
+	return sd.FAddress
 }
 
 func NewDto(
-	address net.UDPAddr,
+	address net.Addr,
 	sender_id string,
 	reciver_id string,
 	namespace string,
 	event string,
 	data interface{},
 ) types.Dto {
-	return &stdDto{
-		address:    address,
-		sender_id:  sender_id,
-		reciver_id: reciver_id,
-		event:      event,
-		data:       data,
-		namespace:  namespace,
+	return &StdDto{
+		FAddress:   address,
+		FSenderId:  sender_id,
+		FReciverId: reciver_id,
+		FEvent:     event,
+		FData:      data,
+		FNamespace: namespace,
 	}
 }
