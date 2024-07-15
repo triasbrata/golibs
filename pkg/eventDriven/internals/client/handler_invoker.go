@@ -12,12 +12,14 @@ func HandlerInvoker(h interface{}, client types.Client, value interface{}) error
 	if vh.Kind() == reflect.Func {
 		in := []reflect.Value{}
 		numParam := vh.Type().NumIn()
-		if numParam >= 1 {
+		if numParam == 2 {
+
 			in = append(in, reflect.ValueOf(client))
 		}
-		if numParam == 2 {
+		if numParam == 2 || numParam == 1 {
 			in = append(in, reflect.ValueOf(value))
 		}
+
 		out := vh.Call(in)
 		if len(out) == 1 {
 			errRaw := out[0]

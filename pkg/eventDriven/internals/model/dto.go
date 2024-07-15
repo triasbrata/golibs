@@ -7,12 +7,12 @@ import (
 )
 
 type StdDto struct {
-	FAddress   net.Addr    `msgpack:"target"`
-	FSenderId  string      `msgpack:"sender_id"`
-	FReciverId string      `msgpack:"reciver_id"`
-	FEvent     string      `msgpack:"event"`
-	FData      interface{} `msgpack:"data",omitempty`
-	FNamespace string      `msgpack:"namespace"`
+	FAddress   *net.UDPAddr `msgpack:"target"`
+	FSenderId  string       `msgpack:"sender_id"`
+	FReciverId string       `msgpack:"reciver_id"`
+	FEvent     string       `msgpack:"event"`
+	FData      interface{}  `msgpack:"data"`
+	FNamespace string       `msgpack:"namespace"`
 }
 
 // Data implements types.Dto.
@@ -52,8 +52,12 @@ func NewDto(
 	event string,
 	data interface{},
 ) types.Dto {
+	cl, err := net.ResolveUDPAddr(address.Network(), address.String())
+	if err != nil {
+		panic(err)
+	}
 	return &StdDto{
-		FAddress:   address,
+		FAddress:   cl,
 		FSenderId:  sender_id,
 		FReciverId: reciver_id,
 		FEvent:     event,
