@@ -44,7 +44,7 @@ func (t *ta) do(ctx context.Context, maxConcurrency int) (res map[string]interfa
 			sem <- struct{}{}
 		}
 		if call, safe := fu.(FuncAsync); safe {
-			go func() {
+			go func(inkey string) {
 				defer func() {
 					if maxConcurrency > 0 {
 						<-sem
@@ -59,8 +59,8 @@ func (t *ta) do(ctx context.Context, maxConcurrency int) (res map[string]interfa
 					errChan <- er
 					return
 				}
-				res[key] = resFunc
-			}()
+				res[inkey] = resFunc
+			}(key)
 		}
 	}
 	wg.Wait()
