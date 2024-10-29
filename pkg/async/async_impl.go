@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"runtime/debug"
+	"strings"
 	"sync"
 	"sync/atomic"
 
@@ -97,6 +98,17 @@ func New() Async {
 
 func catch(funcCaller string, err chan error) {
 	if r := recover(); r != nil {
-		err <- fmt.Errorf("got panic when execute %s: %v \n %v", funcCaller, r, debug.Stack())
+		stack := string(debug.Stack())
+		stackArr := strings.Split(stack, "\n")
+		newStack := make([]string, 0, len(stackArr)-5)
+		for i, stack := range stackArr {
+			if i >= 2 && i <= 6 {
+				continue
+			}
+			newStack = append(newStack, stack)
+		}
+
+		strStack := strings.Join(newStack, "\n")
+		err <- fmt.Errorf("got panic when execute %s: %v \n %s", funcCaller, r, strStack)
 	}
 }
