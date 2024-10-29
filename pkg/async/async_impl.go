@@ -3,6 +3,7 @@ package async
 import (
 	"context"
 	"fmt"
+	"runtime/debug"
 	"sync"
 	"sync/atomic"
 
@@ -71,7 +72,6 @@ func (t *ta) do(ctx context.Context, maxConcurrency int) (res map[string]interfa
 	for {
 		select {
 		case errTw := <-errChan:
-			fmt.Printf("errTw: %v\n", errTw)
 			return res, errTw
 		default:
 			if counter.Load() == int32(lenFunc) {
@@ -97,6 +97,6 @@ func New() Async {
 
 func catch(funcCaller string, err chan error) {
 	if r := recover(); r != nil {
-		err <- fmt.Errorf("got panic when execute %s: %v", funcCaller, r)
+		err <- fmt.Errorf("got panic when execute %s: %v \n %v", funcCaller, r, debug.Stack())
 	}
 }
