@@ -10,17 +10,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func Test_catch(t *testing.T) {
-	errChan := make(chan error)
-	go func() {
-		defer catch("test", errChan)
-		var a map[string]interface{}
-		a["test"] = "boom"
-	}()
-	err := <-errChan
-	assert.Equal(t, fmt.Errorf("got panic when execute %s: %v", "test", "assignment to entry in nil map"), err)
-}
-
 func Test_DoWithMaxConcurrency(t *testing.T) {
 	async := New()
 	now := time.Now()
@@ -79,6 +68,24 @@ func Test_DoWithMaxConcurrency_withError(t *testing.T) {
 
 				if kv%2 == 0 {
 					return nil, fmt.Errorf("boom %v", kv)
+				}
+				return kv, nil
+			}
+		}(v))
+	}
+	_, err := async.DoWithMaxConcurrency(context.Background(), 2)
+	assert.NotNil(t, err)
+}
+func Test_DoWithMaxConcurrency_Panic(t *testing.T) {
+	async := New()
+	arr := []int64{1, 2, 3, 4, 5}
+	for _, v := range arr {
+		async.Add(fmt.Sprintf("test_%v", v), func(kv int64) FuncAsync {
+			return func(ctx context.Context) (interface{}, error) {
+				time.Sleep(100 * time.Millisecond)
+
+				if kv%2 == 0 {
+					panic("hello")
 				}
 				return kv, nil
 			}
