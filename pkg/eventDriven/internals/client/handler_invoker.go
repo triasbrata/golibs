@@ -13,7 +13,7 @@ func HandlerInvoker(h interface{}, client types.Client, value interface{}) error
 		in := []reflect.Value{}
 		numParam := vh.Type().NumIn()
 		if numParam == 2 {
-
+			fmt.Printf("client: %v\n", client)
 			in = append(in, reflect.ValueOf(client))
 		}
 		if numParam == 2 || numParam == 1 {

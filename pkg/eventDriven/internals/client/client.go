@@ -26,6 +26,18 @@ type InternalClient struct {
 	closed           bool
 }
 
+// Send implements types.Client.
+func (c *InternalClient) Send(event string, data interface{}) error {
+	return c.CommitMsg(&model.StdDto{
+		FAddress: ,
+	})
+}
+
+// ID implements types.Client.
+func (c *InternalClient) ID() string {
+	return c.Id
+}
+
 // GetCon implements types.ReaderUDP.
 func (c *InternalClient) GetCon() *net.UDPConn {
 	return c.con
@@ -81,33 +93,32 @@ func (c *InternalClient) Open(serverAddress string) (err error) {
 		return fmt.Errorf("failed to dial UDP: %w", err)
 	}
 	c.closed = false
-	go c.fetchMessage()
-	return c.Send(model.NewDto(
+	go c.fetchMessage(c.con.LocalAddr())
+	return c.CommitMsg(model.NewDto(
 		remoteAddr, "", "", c.namespace, events.CONNECTING, nil,
 	))
 }
-func (c *InternalClient) fetchMessage() {
+func (c *InternalClient) fetchMessage(localAddr net.Addr) {
 	parser.ListenNewMessage(c, func(payload types.Dto, remoteAddr net.Addr) {
 		if ne, safe := c.events[payload.Event()]; safe {
 			if handler, safe := ne[payload.Namespace()]; safe {
 				switch payload.Event() {
+				case events.CONNECTED:
+					//register host
+					c.clients.Register(func() (cid string, clientInstance types.Client, err error) {
+						return payload.SenderID(), NewInternalClient(payload.SenderID(), remoteAddr), nil
+					})
+					//register self
+					c.clients.Register(func() (cid string, clientInstance types.Client, err error) {
+						return payload.ReciverID(), NewInternalClient(payload.ReciverID(), localAddr), nil
+					})
+					HandlerInvoker(handler, c.clients.Get(payload.SenderID()), payload.Event())
 				default:
 					HandlerInvoker(handler, c.clients.Get(payload.SenderID()), payload.Event())
 				}
 			}
 		}
 	})
-}
-func (c *InternalClient) getAdress() net.Addr {
-	if c.rcAdress != nil {
-		return c.rcAdress
-	}
-	var err error
-	c.rcAdress, err = net.ResolveUDPAddr(c.con.LocalAddr().Network(), c.con.LocalAddr().String())
-	if err != nil {
-		panic(err)
-	}
-	return c.rcAdress
 }
 
 func (s *InternalClient) findEvent(event string, namespace string) interface{} {
@@ -122,7 +133,7 @@ func (s *InternalClient) findEvent(event string, namespace string) interface{} {
 }
 
 // Send implements types.InternalClient.
-func (c *InternalClient) Send(data types.Dto) error {
+func (c *InternalClient) CommitMsg(data types.Dto) error {
 	if data.ReciverID() == data.SenderID() && data.ReciverID() != "" {
 		eventHandler := c.findEvent(data.Event(), data.Namespace())
 		if eventHandler != nil {

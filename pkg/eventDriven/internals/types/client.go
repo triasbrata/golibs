@@ -5,11 +5,15 @@ import "net"
 type Client interface {
 	Event
 	Open(serverAddress string) error
+	ID() string
 	Close() error
 }
 type Event interface {
-	Send(data Dto) error
+	Send(event string, data interface{}) error
 	Event(event string, h interface{}) error
+}
+type EventTransport interface {
+	CommitMsg(data Dto) error
 }
 type Dto interface {
 	Address() net.Addr

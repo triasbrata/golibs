@@ -31,6 +31,11 @@ type server struct {
 	*ServOpt
 }
 
+// ID implements types.Server.
+func (s *server) ID() string {
+	return s.Id
+}
+
 // GetCon implements types.ReaderUDP.
 func (s *server) GetCon() *net.UDPConn {
 	return s.con
@@ -82,7 +87,7 @@ func (s *server) findEvent(event string, namespace string) interface{} {
 }
 
 // Send implements Server.
-func (s *server) Send(data types.Dto) error {
+func (s *server) CommitMsg(data types.Dto) error {
 	//send to self
 	if data.ReciverID() == data.SenderID() {
 		eventHandler := s.findEvent(data.Event(), data.Namespace())
