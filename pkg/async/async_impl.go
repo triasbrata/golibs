@@ -2,10 +2,13 @@ package async
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"runtime/debug"
 	"sync"
 
 	"github.com/triasbrata/golibs/pkg/utils"
+	"golang.org/x/sync/errgroup"
 )
 
 // implemenet from async
@@ -29,57 +32,51 @@ func (t *ta) DoWithMaxConcurrency(ctx context.Context, maxConcurrency int) (map[
 }
 
 func (t *ta) do(ctx context.Context, maxConcurrency int) (res map[string]interface{}, err error) {
-	res = utils.H{}
-	wg := sync.WaitGroup{}
-	lenFunc := len(t.funcHolder)
-	wg.Add(lenFunc)
-	var sem chan struct{}
-	// if have max concurancy then we will create an concuracy controller with semantic mecanism
+	group, ctx := errgroup.WithContext(ctx)
 	if maxConcurrency > 0 {
-		sem = make(chan struct{}, maxConcurrency)
+		group.SetLimit(maxConcurrency)
 	}
-	errChan := make(chan error, lenFunc)
+	res = utils.H{}
+	resMap := &sync.Map{}
+	// if have max concurancy then we will create an concuracy controller with semantic mecanism
 	for key, fu := range t.funcHolder {
-		if maxConcurrency > 0 {
-			sem <- struct{}{}
-		}
 		if call, safe := fu.(FuncAsync); safe {
-			go func() {
-				defer func() {
-					if maxConcurrency > 0 {
-						<-sem
+			group.Go(func(inkey string) func() error {
+				return func() (err error) {
+					defer func() {
+						if r := recover(); r != nil {
+							errPanic := fmt.Errorf("%+v\n\t%s", r, debug.Stack())
+							if err != nil {
+								err = errors.Join(err, errPanic)
+							} else {
+								err = errPanic
+							}
+						}
+					}()
+					resFunc, err := call(ctx)
+					if err != nil {
+						return err
 					}
-				}()
-				defer wg.Done()
-				defer catch(key, errChan)
-
-				resFunc, er := call(ctx)
-				if er != nil {
-					fmt.Printf("err: %v\n", er)
-					errChan <- er
-					return
+					resMap.Store(inkey, resFunc)
+					return nil
 				}
-				res[key] = resFunc
-			}()
+			}(key))
 		}
 	}
-	wg.Wait()
-	if len(errChan) > 0 {
-		err = <-errChan
-		return make(map[string]interface{}), err
+	err = group.Wait()
+	if err != nil {
+		return res, err
 	}
-	close(errChan)
-	return res, err
+	resMap.Range(func(key, value any) bool {
+		skey := key.(string)
+		res[skey] = value
+		return true
+	})
+	return res, nil
 }
 
 func New() Async {
 	return &ta{
 		funcHolder: make(utils.H),
-	}
-}
-
-func catch(funcCaller string, err chan error) {
-	if r := recover(); r != nil {
-		err <- fmt.Errorf("got panic when execute %s: %v", funcCaller, r)
 	}
 }
