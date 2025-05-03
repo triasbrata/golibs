@@ -19,6 +19,14 @@ type Tx interface {
 	SelectContext(ctx context.Context, dest interface{}, query string, args ...interface{}) error
 }
 
+//go:generate mockery  --name=DBExec --outpkg=dbxm
+type DBExec interface {
+	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
+	NamedExecContext(ctx context.Context, query string, arg interface{}) (sql.Result, error)
+	SelectContext(ctx context.Context, dest interface{}, query string, args ...interface{}) error
+	BindNamed(query string, arg interface{}) (string, []interface{}, error)
+}
+
 //go:generate mockery  --name=DB --outpkg=dbxm
 type DB interface {
 	BeginTxx(ctx context.Context, opts *sql.TxOptions) (Tx, error)
